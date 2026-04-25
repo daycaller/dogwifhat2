@@ -467,10 +467,10 @@
       <div class="stat-label">TICKER</div>
       <div class="stat-value" style="color:var(--pink)">$WIF<span class="two-mark lg" style="font-size:3rem">2</span></div>
     </div>
-    <div class="sticker-pink stat">
-      <div class="stat-label">TOTAL SUPPLY</div>
-      <div class="stat-value">1B</div>
-      <div class="stat-sub">1,000,000,000 $WIF2</div>
+    <div class="sticker-pink stat" id="supply-card">
+      <div class="stat-label">CIRCULATING SUPPLY</div>
+      <div class="stat-value" id="supply-value">1B</div>
+      <div class="stat-sub" id="supply-sub">loading live data…</div>
     </div>
     <div class="sticker stat tilt-r">
       <div class="stat-label">CHAIN</div>
@@ -1200,6 +1200,121 @@
   });
 
   render();
+})();
+
+// ============================================================
+// LIVE DATA — supply, market cap, price (Dexscreener public API)
+// ============================================================
+(function() {
+  var TOKEN_CA = "9tCjcZFwaqMFSFkiYDRAGd3kxChxVguHDCREb6eSpump";
+  var PAIR_ADDRESS = "89kPF7X5SQdM8Ko4gVzzSLzd7w57tG9JUtcqoKqxcimi";
+  var REFRESH_MS = 30 * 1000;
+
+  var supplyValueEl = document.getElementById("supply-value");
+  var supplySubEl = document.getElementById("supply-sub");
+
+  function formatSupply(n) {
+    if (!n || !isFinite(n)) return "1B";
+    if (n >= 1e9) return (n / 1e9).toFixed(2).replace(/\.?0+$/, "") + "B";
+    if (n >= 1e6) return (n / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.?0+$/, "") + "K";
+    return Math.round(n).toLocaleString();
+  }
+
+  function formatMarketCap(n) {
+    if (!n || !isFinite(n)) return null;
+    if (n >= 1e9) return "$" + (n / 1e9).toFixed(2) + "B";
+    if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
+    if (n >= 1e3) return "$" + (n / 1e3).toFixed(1) + "K";
+    return "$" + Math.round(n).toLocaleString();
+  }
+
+  function formatPrice(n) {
+    if (!n || !isFinite(n)) return null;
+    if (n >= 1) return "$" + n.toFixed(4);
+    if (n >= 0.01) return "$" + n.toFixed(5);
+    if (n >= 0.0001) return "$" + n.toFixed(6);
+    var str = n.toFixed(12);
+    var match = str.match(/^0\.(0+)([1-9]\d*)/);
+    if (match) {
+      var zeros = match[1].length;
+      var rest = match[2].slice(0, 4);
+      var sub = "₀₁₂₃₄₅₆₇₈₉"[zeros] || ("(" + zeros + ")");
+      return "$0.0" + sub + rest;
+    }
+    return "$" + n.toExponential(2);
+  }
+
+  function updateCard(supply, marketCap, price) {
+    if (supply) supplyValueEl.textContent = formatSupply(supply);
+    var parts = [];
+    if (marketCap) parts.push("MC " + formatMarketCap(marketCap));
+    if (price) parts.push(formatPrice(price));
+    if (parts.length) supplySubEl.textContent = parts.join("  •  ");
+  }
+
+  function fetchDexscreener() {
+    var url = "https://api.dexscreener.com/latest/dex/pairs/solana/" + PAIR_ADDRESS;
+    return fetch(url, { method: "GET" })
+      .then(function(r) {
+        if (!r.ok) throw new Error("dexscreener http " + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        var pair = data && data.pair ? data.pair : (data && data.pairs && data.pairs[0]);
+        if (!pair) throw new Error("no pair in response");
+        var price = pair.priceUsd ? parseFloat(pair.priceUsd) : null;
+        var marketCap = pair.marketCap || pair.fdv || null;
+        var supply = (marketCap && price && price > 0) ? (marketCap / price) : null;
+        return { price: price, marketCap: marketCap, supply: supply };
+      });
+  }
+
+  function fetchSolanaSupply() {
+    return fetch("https://api.mainnet-beta.solana.com", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1, method: "getTokenSupply",
+        params: [TOKEN_CA]
+      })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data.result && data.result.value) {
+          return { supply: data.result.value.uiAmount, price: null, marketCap: null };
+        }
+        throw new Error("no supply in rpc response");
+      });
+  }
+
+  function refresh() {
+    fetchDexscreener()
+      .then(function(d) {
+        updateCard(d.supply, d.marketCap, d.price);
+      })
+      .catch(function(e1) {
+        fetchSolanaSupply()
+          .then(function(d) {
+            updateCard(d.supply, null, null);
+            supplySubEl.textContent = "1,000,000,000 $WIF2";
+          })
+          .catch(function(e2) {
+            supplyValueEl.textContent = "1B";
+            supplySubEl.textContent = "1,000,000,000 $WIF2";
+          });
+      });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function() {
+      refresh();
+      setInterval(refresh, REFRESH_MS);
+    });
+  } else {
+    refresh();
+    setInterval(refresh, REFRESH_MS);
+  }
 })();
 </script>
 </body>
