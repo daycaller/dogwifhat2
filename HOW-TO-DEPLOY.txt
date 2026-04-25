@@ -1,0 +1,277 @@
+==================================================
+  $WIF2 SITE — DEPLOYMENT GUIDE (read this first)
+==================================================
+
+You will end up with a live website at a URL like:
+   https://wif2-site.vercel.app
+
+Total time: about 10 minutes. No coding required.
+
+
+==================================================
+  WHAT'S IN THIS FOLDER
+==================================================
+
+CORE FILES
+  index.html               <-- the website (don't rename)
+  vercel.json              <-- tells Vercel how to host it
+  README.md                <-- description for the GitHub repo
+  .gitignore               <-- ignore list (don't worry)
+
+FAVICONS (browser tab icon, iPhone home screen icon, etc.)
+  favicon.svg              <-- vector master, modern browsers
+  favicon.ico              <-- legacy IE/Edge fallback
+  favicon-16.png           <-- 16px tab icon
+  favicon-32.png           <-- 32px tab icon (Retina)
+  apple-touch-icon.png     <-- iPhone home screen icon
+  icon-192.png             <-- Android / PWA
+  icon-512.png             <-- Large PWA / splash
+  site.webmanifest         <-- PWA manifest (defines app name)
+
+GUIDE
+  HOW-TO-DEPLOY.txt        <-- this file
+
+
+All these files need to go INTO your "wif2-site" folder
+together. Don't worry about what each one does — just
+make sure all 13 of them end up in the folder.
+
+
+==================================================
+  STEP 1 — MAKE A GITHUB ACCOUNT (skip if you have one)
+==================================================
+
+1.1  Go to https://github.com/signup
+1.2  Sign up with your email. Pick any username.
+1.3  Verify your email when GitHub sends you the link.
+
+
+==================================================
+  STEP 2 — INSTALL GITHUB DESKTOP
+==================================================
+
+GitHub Desktop is a free app that lets you upload files
+to GitHub without using the command line.
+
+2.1  Go to https://desktop.github.com
+2.2  Click the big purple "Download for macOS" (or Windows)
+2.3  Open the downloaded file and install it.
+2.4  Open GitHub Desktop. Sign in with the GitHub account
+     you just made (it'll open a browser tab to log you in).
+2.5  When it asks "Configure Git" — just click Continue/Finish.
+     Default name and email are fine.
+
+
+==================================================
+  STEP 3 — CREATE THE REPOSITORY
+==================================================
+
+3.1  In GitHub Desktop, click:
+       File menu  ->  New repository...
+
+3.2  Fill in EXACTLY these values:
+
+     Name:           wif2-site
+     Description:    $WIF2 - dogwifhat 2 - the hat stays on
+     Local path:     (click "Choose..." and pick your Desktop or Documents)
+     Initialize this repository with a README:  UNCHECK this box
+     Git ignore:     None
+     License:        None
+
+3.3  Click "Create repository"
+
+3.4  GitHub Desktop made a folder on your computer at the
+     Local path you chose, named "wif2-site".
+     Open that folder in Finder (Mac) or File Explorer (Windows).
+
+3.5  Drag ALL THESE FILES INTO that folder (13 files total):
+       - index.html
+       - vercel.json
+       - README.md
+       - .gitignore
+       - favicon.svg
+       - favicon.ico
+       - favicon-16.png
+       - favicon-32.png
+       - apple-touch-icon.png
+       - icon-192.png
+       - icon-512.png
+       - site.webmanifest
+       - HOW-TO-DEPLOY.txt (optional, ok to leave it out)
+
+     IMPORTANT: drag the files themselves, not the folder
+     they came in. The files should sit directly inside
+     the "wif2-site" folder.
+
+
+==================================================
+  STEP 4 — UPLOAD TO GITHUB
+==================================================
+
+4.1  Go back to GitHub Desktop. You'll see all your files
+     listed in the left sidebar with green "+" marks.
+
+4.2  At the bottom-left, find the box that says
+     "Summary (required)". Type:
+
+         initial site
+
+4.3  Click the blue button "Commit to main"
+
+4.4  At the top of the window, click the button that says
+     "Publish repository"
+
+4.5  A popup appears. Settings to use:
+
+     Name:                         wif2-site
+     Description:                  $WIF2 - dogwifhat 2 - the hat stays on
+     Keep this code private:       UNCHECK this box (must be public for free Vercel)
+     Organization:                 None / your username
+
+4.6  Click "Publish repository"
+
+Your code is now on GitHub. You can verify by going to:
+   https://github.com/YOUR-USERNAME/wif2-site
+
+
+==================================================
+  STEP 5 — DEPLOY ON VERCEL
+==================================================
+
+5.1  Go to https://vercel.com/signup
+
+5.2  Click "Continue with GitHub" — sign in with the
+     same GitHub account.
+
+5.3  When Vercel asks about a plan, choose:
+       Hobby (free)
+
+5.4  When Vercel asks for your name/team:
+       - Pick anything. "Personal" is fine.
+
+5.5  You'll land on the Vercel dashboard. Click the big
+     button "Add New..." (top-right) -> "Project"
+
+5.6  You'll see a list of your GitHub repositories.
+     Find "wif2-site" and click "Import" next to it.
+
+     If you don't see it: click "Adjust GitHub App Permissions"
+     and grant Vercel access to wif2-site, then come back.
+
+5.7  You'll see a configuration page. Use these settings:
+
+     Project Name:           wif2-site                  (leave default)
+     Framework Preset:       Other                      (Vercel auto-detects this)
+     Root Directory:         ./                         (leave default)
+     Build Command:          (leave EMPTY — don't fill in)
+     Output Directory:       (leave EMPTY — don't fill in)
+     Install Command:        (leave EMPTY — don't fill in)
+     Environment Variables:  (leave EMPTY — none needed)
+
+     DO NOT click "Override" on any of these.
+     Just leave everything at default.
+
+5.8  Click the big black "Deploy" button.
+
+5.9  Wait about 30 seconds. You'll see fireworks (literally),
+     and a screen with your live URL like:
+
+         https://wif2-site.vercel.app
+     or  https://wif2-site-yourusername.vercel.app
+
+5.10 Click "Continue to Dashboard" or click the URL to
+     visit your live site.
+
+
+==================================================
+  STEP 6 — TEST IT ON YOUR IPHONE
+==================================================
+
+6.1  Open Safari on your iPhone.
+6.2  Type in the Vercel URL from step 5.9.
+6.3  The site should load with the dog photo, big "THE HAT
+     STAYS ON. 2" text, etc.
+6.4  Look at your browser tab — you'll see the favicon
+     (the chunky 2 with the pink hat).
+6.5  Scroll to the PFP maker section. Upload a photo.
+     Drag the hat. Hit DOWNLOAD.
+6.6  Tap "SAVE TO PHOTOS" — the iOS share sheet should
+     appear with options like "Save Image".
+6.7  (Optional) Tap the share button in Safari ->
+     Add to Home Screen. The app icon will be the chunky
+     2 with the pink hat.
+
+
+==================================================
+  HOW TO UPDATE THE SITE LATER
+==================================================
+
+When you want to change anything:
+
+A.  Replace the index.html in your "wif2-site" folder with
+    a new version (Claude can give you a new one).
+
+B.  Open GitHub Desktop. It will detect the change automatically.
+
+C.  At the bottom-left, type a summary like:
+       update hero text
+    Click "Commit to main"
+
+D.  At the top, click "Push origin"
+
+E.  Vercel automatically deploys the new version in
+    about 20 seconds. Your live URL updates with no
+    extra work needed.
+
+
+==================================================
+  ADD A CUSTOM DOMAIN LATER (e.g. wif2.io)
+==================================================
+
+After you buy a domain at Namecheap, GoDaddy, etc:
+
+A.  In Vercel, go to your wif2-site project ->
+    Settings tab -> Domains
+B.  Type your domain (e.g. wif2.io) -> Add
+C.  Vercel shows you 1-2 DNS records (an A record and/or
+    a CNAME). Copy them.
+D.  Go to your domain registrar's DNS settings page.
+    Add the records exactly as Vercel showed.
+E.  Wait 5-30 minutes. Refresh Vercel's Domains page.
+    Status changes to "Valid Configuration" and you're live.
+
+
+==================================================
+  IF SOMETHING GOES WRONG
+==================================================
+
+- Site loads blank on iPhone:
+  Make sure you opened the .vercel.app URL in Safari, not
+  a file you downloaded. The site needs to be served from
+  a real URL (which Vercel gives you).
+
+- Favicon doesn't show in tab right away:
+  Browsers cache favicons aggressively. Try a hard refresh
+  (hold shift while reloading) or open in a private window.
+  May take a few minutes to appear in some browsers.
+
+- "Save to Photos" doesn't open the share sheet:
+  This only works on real iPhone Safari over HTTPS (which
+  Vercel gives you for free). It does NOT work in the
+  Claude in-app preview, or when opening the file locally.
+
+- Vercel says "Build failed":
+  Make sure Build Command and Output Directory in step 5.7
+  are EMPTY. This is a static site — there's nothing to build.
+
+- GitHub Desktop says "this is not a Git repository":
+  You probably dragged the wrong folder. Re-do step 3.
+
+- Files aren't appearing in GitHub Desktop:
+  They need to be INSIDE the wif2-site folder GitHub
+  Desktop made — not next to it.
+
+- One or more files missing from GitHub Desktop's list:
+  The .gitignore is hidden by default on Mac. To show
+  hidden files in Finder: press Cmd + Shift + . (period).
+  Make sure all 12 files are visible and dragged in.

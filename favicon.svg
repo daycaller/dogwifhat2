@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- soft cream circle background -->
+  <circle cx="32" cy="32" r="30" fill="#fff4e6" stroke="#0f0f12" stroke-width="3"/>
+  
+  <!-- Big pink 2 with thick black outline, slightly tilted -->
+  <text x="32" y="50" 
+        font-family="Bagel Fat One, Arial Black, sans-serif" 
+        font-size="46" font-weight="900" 
+        fill="#ff7eb6" 
+        stroke="#0f0f12" stroke-width="3.5" 
+        paint-order="stroke fill" 
+        text-anchor="middle"
+        transform="rotate(-6 32 32)">2</text>
+  
+  <!-- Hat sitting on top of the 2 -->
+  <g transform="translate(32,12) rotate(-5) scale(0.62)">
+    <!-- main hat body, slouchy -->
+    <path d="M -16 -2 Q -18 -14, -10 -16 Q 0 -22, 12 -18 Q 18 -14, 16 -2 Q 14 6, 8 8 L -8 8 Q -14 6, -16 -2 Z"
+          fill="#d96e8a" stroke="#0f0f12" stroke-width="3" stroke-linejoin="round"/>
+    <!-- knit detail line -->
+    <path d="M -12 -2 Q 0 -10, 12 -4" fill="none" stroke="#0f0f12" stroke-width="1.5" opacity="0.35"/>
+    <!-- inner shadow showing depth -->
+    <path d="M -8 -2 Q 0 -8, 8 -4 Q 6 4, 2 6 L -2 6 Q -6 4, -8 -2 Z"
+          fill="#a04d68" opacity="0.5"/>
+  </g>
+</svg>
