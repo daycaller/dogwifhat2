@@ -1345,6 +1345,8 @@
   var PAIR_ADDRESS = "89kPF7X5SQdM8Ko4gVzzSLzd7w57tG9JUtcqoKqxcimi";
   var REFRESH_MS = 30 * 1000;
   var CACHE_KEY = "wif2_live_data_v3";
+  // Mint cap — circulating supply can never exceed this. Used as a hard clamp.
+  var MAX_SUPPLY = 1e9;
 
   var supplyValueEl = document.getElementById("supply-value");
   var supplySubEl = document.getElementById("supply-sub");
@@ -1352,6 +1354,8 @@
   // ============ FORMATTERS ============
   function formatSupply(n) {
     if (!n || !isFinite(n)) return null;
+    // Floor at the mint cap — never display more than 1B regardless of input
+    if (n > MAX_SUPPLY) n = MAX_SUPPLY;
     if (n >= 1e9) return (n / 1e9).toFixed(3).replace(/\.?0+$/, "") + "B";
     if (n >= 1e6) return (n / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M";
     if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.?0+$/, "") + "K";
@@ -1404,10 +1408,6 @@
   } catch (e) { /* localStorage unavailable */ }
 
   // ============ DATA SOURCES ============
-
-  // The known maximum supply of $WIF2 (mint authority should be revoked at 1B).
-  // Used as a sanity clamp — circulating supply CANNOT exceed total supply.
-  var MAX_SUPPLY = 1e9;
 
   // PRIMARY: Dexscreener — but only trust pairs where baseToken matches OUR token
   function fetchDexscreener() {
@@ -1466,8 +1466,9 @@
         }
 
         // CRITICAL CLAMP: supply can never exceed the actual mint cap (1B).
-        // If our math gives more, the price or MC is stale/wrong — fall back to mint cap.
-        if (supply && supply > MAX_SUPPLY * 1.001) {
+        // Math can give slightly-above-1B due to API stale data or rounding;
+        // anything >= 1B is just 1B.
+        if (supply && supply >= MAX_SUPPLY) {
           supply = MAX_SUPPLY;
         }
 
@@ -1536,8 +1537,8 @@
         // Dexscreener failed — try on-chain for at least a supply number
         fetchOnchainSupply()
           .then(function(supply) {
-            // Clamp on-chain reading to mint cap as well (in case of weird RPC response)
-            if (supply && supply > MAX_SUPPLY * 1.001) supply = MAX_SUPPLY;
+            // Clamp on-chain reading to mint cap (RPC sometimes returns 1.0000001B due to decimals)
+            if (supply && supply >= MAX_SUPPLY) supply = MAX_SUPPLY;
             var d = { supply: supply, marketCap: null, price: null };
             applyData(d);
             hasFirstSuccess = true;
