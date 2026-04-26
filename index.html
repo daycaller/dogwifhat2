@@ -1405,7 +1405,11 @@
 
   // ============ DATA SOURCES ============
 
-  // PRIMARY: Dexscreener (gives us all three: price, MC, FDV)
+  // The known maximum supply of $WIF2 (mint authority should be revoked at 1B).
+  // Used as a sanity clamp — circulating supply CANNOT exceed total supply.
+  var MAX_SUPPLY = 1e9;
+
+  // PRIMARY: Dexscreener — but only trust pairs where baseToken matches OUR token
   function fetchDexscreener() {
     var url = "https://api.dexscreener.com/latest/dex/tokens/" + TOKEN_CA;
     return fetch(url, { method: "GET", headers: { "Accept": "application/json" } })
@@ -1414,22 +1418,46 @@
         return r.json();
       })
       .then(function(data) {
-        var pairs = (data && data.pairs) || [];
-        if (pairs.length === 0) throw new Error("no pairs");
-        // Use pair with highest liquidity (most reliable)
-        pairs.sort(function(a, b) {
+        var allPairs = (data && data.pairs) || [];
+        if (allPairs.length === 0) throw new Error("no pairs");
+
+        // CRITICAL: filter to pairs where OUR token is the base token.
+        // Dexscreener returns pairs that include the token in either position,
+        // and marketCap/fdv values are computed against the BASE token. If we
+        // grab a pair where our token is the quote, the marketCap is for the
+        // OTHER token (e.g. SOL's ~$80B mc) — wildly wrong.
+        var ourPairs = allPairs.filter(function(p) {
+          return p.baseToken && p.baseToken.address &&
+                 p.baseToken.address.toLowerCase() === TOKEN_CA.toLowerCase();
+        });
+
+        if (ourPairs.length === 0) {
+          // Edge case: no pair has us as base. Don't trust marketCap from any of them.
+          // Return just price (averaged) so the sub-line can show something.
+          var pricedPairs = allPairs.filter(function(p) { return p.priceUsd; });
+          var avgPrice = pricedPairs.length
+            ? pricedPairs.reduce(function(s, p) { return s + parseFloat(p.priceUsd); }, 0) / pricedPairs.length
+            : null;
+          return { price: avgPrice, marketCap: null, supply: null, _source: "ds-no-base" };
+        }
+
+        // Among pairs where we're the base, pick the one with highest USD liquidity
+        ourPairs.sort(function(a, b) {
           return ((b.liquidity && b.liquidity.usd) || 0) - ((a.liquidity && a.liquidity.usd) || 0);
         });
-        var pair = pairs[0];
+        var pair = ourPairs[0];
 
         var price = pair.priceUsd ? parseFloat(pair.priceUsd) : null;
         var marketCap = pair.marketCap || null;
         var fdv = pair.fdv || null;
 
-        // Derive circulating supply:
-        // If marketCap exists AND it's noticeably smaller than fdv, Dexscreener
-        // is aware of burns/locks — use marketCap/price.
-        // Otherwise fall back to fdv/price (= total supply).
+        // Sanity check: marketCap should be <= fdv. If it's not, the data is wrong.
+        if (marketCap && fdv && marketCap > fdv * 1.05) {
+          // 5% tolerance for rounding; beyond that, fall back to fdv
+          marketCap = fdv;
+        }
+
+        // Derive supply
         var supply = null;
         if (marketCap && price && price > 0) {
           supply = marketCap / price;
@@ -1437,10 +1465,17 @@
           supply = fdv / price;
         }
 
+        // CRITICAL CLAMP: supply can never exceed the actual mint cap (1B).
+        // If our math gives more, the price or MC is stale/wrong — fall back to mint cap.
+        if (supply && supply > MAX_SUPPLY * 1.001) {
+          supply = MAX_SUPPLY;
+        }
+
         return {
           price: price,
           marketCap: marketCap || fdv,
-          supply: supply
+          supply: supply,
+          _source: "ds"
         };
       });
   }
@@ -1501,6 +1536,8 @@
         // Dexscreener failed — try on-chain for at least a supply number
         fetchOnchainSupply()
           .then(function(supply) {
+            // Clamp on-chain reading to mint cap as well (in case of weird RPC response)
+            if (supply && supply > MAX_SUPPLY * 1.001) supply = MAX_SUPPLY;
             var d = { supply: supply, marketCap: null, price: null };
             applyData(d);
             hasFirstSuccess = true;
