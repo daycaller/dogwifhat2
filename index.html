@@ -98,6 +98,8 @@
   .marquee { overflow: hidden; border-top: 4px solid var(--ink); border-bottom: 4px solid var(--ink); background: var(--ink); }
   .marquee.pink-bg { background: var(--pink); }
   .marquee-track { display: flex; width: max-content; animation: marquee 28s linear infinite; padding: 12px 0; }
+  /* Top marquee (without .pink-bg) scrolls slower for readability */
+  .marquee:not(.pink-bg) .marquee-track { animation-duration: 60s; }
   .marquee-text {
     font-family: 'Bagel Fat One', system-ui;
     font-size: clamp(1.5rem, 4vw, 2.5rem);
@@ -581,8 +583,8 @@
 <!-- MARQUEE 1 -->
 <div class="marquee">
   <div class="marquee-track">
-    <span class="marquee-text">THE HAT STAYS ON • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • SAME DOG NEW HAT • </span>
-    <span class="marquee-text">THE HAT STAYS ON • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • SAME DOG NEW HAT • </span>
+    <span class="marquee-text">THE HAT STAYS ON • 2 • #WIF2 • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • #WIF2 • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • #WIF2 • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • #WIF2 • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • #WIF2 • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • #WIF2 • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • #WIF2 • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • #WIF2 • 2 • SAME DOG NEW HAT • </span>
+    <span class="marquee-text">THE HAT STAYS ON • 2 • #WIF2 • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • #WIF2 • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • #WIF2 • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • #WIF2 • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • #WIF2 • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • #WIF2 • 2 • SAME DOG NEW HAT • THE HAT STAYS ON • 2 • #WIF2 • 2 • DOGWIFHAT2 • 2 • $WIF2 • 2 • HE'S BACK • 2 • #WIF2 • 2 • SAME DOG NEW HAT • </span>
   </div>
 </div>
 
