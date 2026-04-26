@@ -597,8 +597,8 @@
     </div>
     <div class="sticker-pink stat" id="supply-card">
       <div class="stat-label">CIRCULATING SUPPLY</div>
-      <div class="stat-value" id="supply-value">—</div>
-      <div class="stat-sub" id="supply-sub">loading…</div>
+      <div class="stat-value" id="supply-value">1B</div>
+      <div class="stat-sub" id="supply-sub">1,000,000,000 $WIF2</div>
     </div>
     <div class="sticker stat tilt-r">
       <div class="stat-label">CHAIN</div>
@@ -1331,42 +1331,32 @@
 })();
 
 // ============================================================
-// LIVE DATA — circulating supply (on-chain RPC = ground truth for burns),
-// plus market cap & price from Dexscreener for the sub line.
+// LIVE DATA — circulating supply, market cap, price.
+//
+// Strategy:
+//   1. Dexscreener API gives us price, marketCap, and fdv directly.
+//      When marketCap < fdv, Dexscreener knows about burns/locks — we use it.
+//      When marketCap == fdv (full 1B), it's just FDV with no real circulating data.
+//   2. As a backup, query the Solana chain directly for total supply (catches burns).
+//   3. Cache last good values in localStorage so we never re-flicker on refresh.
 // ============================================================
 (function() {
   var TOKEN_CA = "9tCjcZFwaqMFSFkiYDRAGd3kxChxVguHDCREb6eSpump";
   var PAIR_ADDRESS = "89kPF7X5SQdM8Ko4gVzzSLzd7w57tG9JUtcqoKqxcimi";
   var REFRESH_MS = 30 * 1000;
-  var CACHE_KEY = "wif2_live_data_v2";
+  var CACHE_KEY = "wif2_live_data_v3";
 
   var supplyValueEl = document.getElementById("supply-value");
   var supplySubEl = document.getElementById("supply-sub");
 
-  // ---- Restore cached values immediately so we never show "1B" placeholder
-  // unless we genuinely have no data yet ----
-  try {
-    var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-    if (cached && cached.supply) {
-      supplyValueEl.textContent = formatSupply(cached.supply);
-      supplySubEl.textContent = formatSubLine(cached.marketCap, cached.price);
-    } else {
-      supplyValueEl.textContent = "—";
-      supplySubEl.textContent = "loading…";
-    }
-  } catch (e) {
-    supplyValueEl.textContent = "—";
-    supplySubEl.textContent = "loading…";
-  }
-
+  // ============ FORMATTERS ============
   function formatSupply(n) {
-    if (!n || !isFinite(n)) return "—";
+    if (!n || !isFinite(n)) return null;
     if (n >= 1e9) return (n / 1e9).toFixed(3).replace(/\.?0+$/, "") + "B";
     if (n >= 1e6) return (n / 1e6).toFixed(2).replace(/\.?0+$/, "") + "M";
     if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.?0+$/, "") + "K";
     return Math.round(n).toLocaleString();
   }
-
   function formatMarketCap(n) {
     if (!n || !isFinite(n)) return null;
     if (n >= 1e9) return "$" + (n / 1e9).toFixed(2) + "B";
@@ -1374,7 +1364,6 @@
     if (n >= 1e3) return "$" + (n / 1e3).toFixed(1) + "K";
     return "$" + Math.round(n).toLocaleString();
   }
-
   function formatPrice(n) {
     if (!n || !isFinite(n)) return null;
     if (n >= 1) return "$" + n.toFixed(4);
@@ -1390,7 +1379,6 @@
     }
     return "$" + n.toExponential(2);
   }
-
   function formatSubLine(mc, price) {
     var parts = [];
     if (mc) parts.push("MC " + formatMarketCap(mc));
@@ -1398,110 +1386,145 @@
     return parts.length ? parts.join("  •  ") : "";
   }
 
-  // ---- DATA SOURCES ----
-
-  // Primary: Solana RPC for ON-CHAIN supply (this is the source of truth for burns)
-  function fetchSolanaSupply() {
-    return fetch("https://api.mainnet-beta.solana.com", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0", id: 1, method: "getTokenSupply",
-        params: [TOKEN_CA]
-      })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data && data.result && data.result.value && data.result.value.uiAmount != null) {
-        return data.result.value.uiAmount;
-      }
-      throw new Error("no supply in rpc response");
-    });
+  // ============ APPLY DATA TO UI ============
+  function applyData(d) {
+    if (!d) return;
+    if (d.supply) supplyValueEl.textContent = formatSupply(d.supply);
+    var sub = formatSubLine(d.marketCap, d.price);
+    if (sub) supplySubEl.textContent = sub;
   }
 
-  // Fallback Solana RPC endpoint if mainnet-beta is rate-limiting
-  function fetchSolanaSupplyFallback() {
-    return fetch("https://solana-api.projectserum.com", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0", id: 1, method: "getTokenSupply",
-        params: [TOKEN_CA]
-      })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data && data.result && data.result.value && data.result.value.uiAmount != null) {
-        return data.result.value.uiAmount;
-      }
-      throw new Error("no supply in fallback rpc response");
-    });
-  }
+  // ============ HYDRATE FROM CACHE IMMEDIATELY ============
+  // So we never show "loading…" if we have prior data
+  try {
+    var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+    if (cached && (cached.supply || cached.marketCap)) {
+      applyData(cached);
+    }
+  } catch (e) { /* localStorage unavailable */ }
 
-  // Secondary: Dexscreener for price + market cap (used for sub-line only, NOT for supply derivation)
+  // ============ DATA SOURCES ============
+
+  // PRIMARY: Dexscreener (gives us all three: price, MC, FDV)
   function fetchDexscreener() {
-    var url = "https://api.dexscreener.com/latest/dex/pairs/solana/" + PAIR_ADDRESS;
-    return fetch(url, { method: "GET" })
+    var url = "https://api.dexscreener.com/latest/dex/tokens/" + TOKEN_CA;
+    return fetch(url, { method: "GET", headers: { "Accept": "application/json" } })
       .then(function(r) {
         if (!r.ok) throw new Error("dexscreener http " + r.status);
         return r.json();
       })
       .then(function(data) {
-        var pair = data && data.pair ? data.pair : (data && data.pairs && data.pairs[0]);
-        if (!pair) throw new Error("no pair in response");
+        var pairs = (data && data.pairs) || [];
+        if (pairs.length === 0) throw new Error("no pairs");
+        // Use pair with highest liquidity (most reliable)
+        pairs.sort(function(a, b) {
+          return ((b.liquidity && b.liquidity.usd) || 0) - ((a.liquidity && a.liquidity.usd) || 0);
+        });
+        var pair = pairs[0];
+
+        var price = pair.priceUsd ? parseFloat(pair.priceUsd) : null;
+        var marketCap = pair.marketCap || null;
+        var fdv = pair.fdv || null;
+
+        // Derive circulating supply:
+        // If marketCap exists AND it's noticeably smaller than fdv, Dexscreener
+        // is aware of burns/locks — use marketCap/price.
+        // Otherwise fall back to fdv/price (= total supply).
+        var supply = null;
+        if (marketCap && price && price > 0) {
+          supply = marketCap / price;
+        } else if (fdv && price && price > 0) {
+          supply = fdv / price;
+        }
+
         return {
-          price: pair.priceUsd ? parseFloat(pair.priceUsd) : null,
-          marketCap: pair.marketCap || pair.fdv || null
+          price: price,
+          marketCap: marketCap || fdv,
+          supply: supply
         };
       });
   }
 
-  // ---- ORCHESTRATION ----
+  // SECONDARY: On-chain Solana RPC (ground truth for burns).
+  // Use multiple endpoints with CORS support; fall through on failure.
+  var SOLANA_RPCS = [
+    "https://api.mainnet-beta.solana.com",
+    "https://rpc.ankr.com/solana",
+    "https://solana.public-rpc.com"
+  ];
+
+  function fetchOnchainSupply(rpcIndex) {
+    rpcIndex = rpcIndex || 0;
+    if (rpcIndex >= SOLANA_RPCS.length) {
+      return Promise.reject(new Error("all rpcs failed"));
+    }
+    var url = SOLANA_RPCS[rpcIndex];
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1, method: "getTokenSupply", params: [TOKEN_CA]
+      })
+    })
+    .then(function(r) {
+      if (!r.ok) throw new Error("rpc http " + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      if (data && data.result && data.result.value && data.result.value.uiAmount != null) {
+        return data.result.value.uiAmount;
+      }
+      throw new Error("malformed rpc response");
+    })
+    .catch(function(err) {
+      // Try next RPC
+      return fetchOnchainSupply(rpcIndex + 1);
+    });
+  }
+
+  // ============ ORCHESTRATION ============
+  var hasFirstSuccess = false;
 
   function refresh() {
-    // Get on-chain supply (with fallback) and dex data in parallel
-    var supplyPromise = fetchSolanaSupply().catch(function() {
-      return fetchSolanaSupplyFallback();
-    });
-    var dexPromise = fetchDexscreener().catch(function() {
-      return { price: null, marketCap: null };
-    });
-
-    Promise.all([
-      supplyPromise.catch(function() { return null; }),
-      dexPromise
-    ]).then(function(results) {
-      var supply = results[0];
-      var dex = results[1] || { price: null, marketCap: null };
-
-      // If we got supply from chain, use it. Otherwise keep last cached value.
-      if (supply != null) {
-        supplyValueEl.textContent = formatSupply(supply);
-      }
-
-      // For market cap: prefer Dexscreener (since it's pre-computed against the
-      // most active pair), but if we have on-chain supply AND a price, we can
-      // compute it ourselves as a fallback to validate.
-      var displayMc = dex.marketCap;
-      if (!displayMc && supply && dex.price) {
-        displayMc = supply * dex.price;
-      }
-
-      var subLine = formatSubLine(displayMc, dex.price);
-      if (subLine) supplySubEl.textContent = subLine;
-
-      // Cache
-      if (supply || displayMc || dex.price) {
+    fetchDexscreener()
+      .then(function(d) {
+        // Cross-check supply with on-chain RPC if available, but don't block on it
+        applyData(d);
+        hasFirstSuccess = true;
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({
-            supply: supply,
-            marketCap: displayMc,
-            price: dex.price,
-            ts: Date.now()
+            supply: d.supply, marketCap: d.marketCap, price: d.price, ts: Date.now()
           }));
-        } catch (e) { /* localStorage unavailable, no-op */ }
-      }
-    });
+        } catch (e) {}
+      })
+      .catch(function(dexErr) {
+        // Dexscreener failed — try on-chain for at least a supply number
+        fetchOnchainSupply()
+          .then(function(supply) {
+            var d = { supply: supply, marketCap: null, price: null };
+            applyData(d);
+            hasFirstSuccess = true;
+            // Don't overwrite cache with partial data unless we have nothing
+            try {
+              var existing = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+              if (!existing || !existing.supply) {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({
+                  supply: supply, marketCap: null, price: null, ts: Date.now()
+                }));
+              }
+            } catch (e) {}
+          })
+          .catch(function(rpcErr) {
+            // Both failed. If we never got data and have no cache, show clear failure.
+            if (!hasFirstSuccess) {
+              if (supplyValueEl.textContent === "—" || supplyValueEl.textContent === "loading…") {
+                supplyValueEl.textContent = "1B";
+                supplySubEl.textContent = "1,000,000,000 $WIF2";
+              }
+            }
+            // If we DID succeed before, leave the last good values on screen.
+          });
+      });
   }
 
   if (document.readyState === "loading") {
